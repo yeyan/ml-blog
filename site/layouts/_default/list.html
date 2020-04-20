@@ -1,0 +1,27 @@
+{{ define "main" }}
+<div class="posts">
+    <h1 class="content-subhead"> Recent Posts </h1>
+    <hr>
+    {{ $paginator := .Paginate (where .Pages "Type" "posts") 3 }}
+    {{ range $paginator.Pages }}
+    <section class="post">
+        <header class="post-header">
+            <h2 class="post-title">{{ .Title }}</h2>
+            <p class="post-meta">
+                <span>
+                    <i class="fas fa-calendar"></i>
+                    {{ .Date.Format "2006-01-01" }}
+                </span>
+            </p>
+        </header>
+        <div class="post-description">
+            {{ truncate 100 .Content }}
+            <div>
+                <a href="{{ .RelPermalink }}">Read More…</a>
+            </div>
+        </div>
+    </section>
+    {{ end }}
+    {{ partial "pagination.html" (dict "Paginator" $paginator) }}
+</div>
+{{ end }}

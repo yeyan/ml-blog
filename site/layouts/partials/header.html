@@ -1,0 +1,13 @@
+<nav class="navbar pure-menu pure-menu-horizontal">
+    <ul class="pure-menu-list">
+        {{ $currentPage := . }}
+        {{ range .Site.Menus.main }}
+        {{ $active := eq $currentPage.URL .URL}}
+        <li class="pure-menu-item">
+            <a class="pure-menu-link" href="{{.URL}}">{{.Name}}</a>
+        </li>
+        {{ end }}
+    </ul>
+</nav>
+<div class="banner">
+</div>

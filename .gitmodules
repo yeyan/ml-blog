@@ -1,0 +1,3 @@
+[submodule "site/dist"]
+	path = site/dist
+	url = git@github.com:yeyan/yeyan.github.io.git
