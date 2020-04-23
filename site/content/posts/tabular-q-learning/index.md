@@ -1,8 +1,6 @@
 ---
-layout: post
-title:  "Beat Mazes with Reinforcement Learning"
-date:   2020-04-10
-categories: RL Maze
+title: "Beat Mazes with Reinforcement Learning"
+date: "2020-04-10"
 markup: pdc
 ---
 
