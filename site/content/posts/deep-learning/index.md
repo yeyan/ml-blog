@@ -1,5 +1,5 @@
 ---
-title: "Deep Learning with PyTorch (Part 1)"
+title: "Deep Learning with PyTorch (In Progress)"
 date: "2020-12-09"
 markup: pdc
 ---
@@ -125,30 +125,32 @@ class Model(nn.Module):
             nn.Dropout(.1),
             nn.MaxPool2d(2),
             # Convolutional Layer 2
-            nn.Conv2d(32, 64, 3, padding=(1, 1)),
+            nn.Conv2d(32, 64, 3, padding=(1, 1), bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.Dropout(.1),
             nn.MaxPool2d(2),
             # Convolutional Layer 3
-            nn.Conv2d(64, 128, 3, padding=(1, 1)),
+            nn.Conv2d(64, 128, 3, padding=(1, 1), bias=False),
             nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.Dropout(.1),
             nn.MaxPool2d(2),
             # Convolutional Layer 4
-            nn.Conv2d(128, 128, 3, padding=(1, 1)),
+            nn.Conv2d(128, 128, 3, padding=(1, 1), bias=False),
             nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.Flatten(),
             # Fully Connected layer 1
-            nn.Linear(1152, 512),
+            nn.Linear(1152, 512, bias=False),
+            nn.BatchNorm1d(512),
             nn.ReLU(),
             # Fully Connected layer 2
-            nn.Linear(512, 256),
+            nn.Linear(512, 256, bias=False),
+            nn.BatchNorm1d(256),
             nn.ReLU(),
             # Fully Connected layer 3
-            nn.Linear(256, 10),
+            nn.Linear(256, 10, bias=False),
             nn.Softmax(dim=1)
         ])
         # Move model to GPU if possible
@@ -161,9 +163,9 @@ class Model(nn.Module):
         return x
 {{</highlight>}}
 
-*Convolutional Layer*
+**Convolutional Layer**
 
-Convolutional layers are very common in computer vision, as they shine in capturing local features. Assuming $X$ is a 3x3 matrix which represents a channel of a image, and K is a 2x2 matrix which is a kernel/filter matrix. Then their convolution can be express as the following:
+`torch.nn.Conv2d` defines a convolutional layer. Convolutional layers are very common in computer vision, as they shine in capturing local features. Assuming $X$ is a 3x3 matrix which represents a channel of a image, and K is a 2x2 matrix which is a kernel/filter matrix. Then their convolution can be express as the following:
 
 $$
 \begin{aligned}
@@ -185,7 +187,7 @@ Conv(X, K) &= \begin{bmatrix}
 \end{aligned}
 $$
 
-We can also illustrate the idea in Python:
+We can also illustrate the idea in plain Python:
 
 {{<highlight py>}}
 from torch.nn import functional as F
@@ -225,10 +227,109 @@ inputs = torch.randn(1, 1, 5, 5)
 kernel = torch.randn(1, 1, 2, 3)
 
 # Compare conv_channel's output and PyTorch's conv2d's output
+
+padding = (1, 2)
+stride = (5, 3)
+
 assert torch.eq(
-    conv_channel(inputs[0, 0, :, :], kernel[0, 0, :, :], padding=(1, 2), stride=(5, 3)),
-    F.conv2d(inputs, kernel, padding=(1, 2), stride=(5, 3))[0, 0, :, :]
+    conv_channel(inputs[0, 0, :, :], kernel[0, 0, :, :], padding=padding, stride=stride),
+    F.conv2d(inputs, kernel, padding=padding, stride=stride)[0, 0, :, :]
 ).all().item()
 {{</highlight>}}
 
-To be continued ...
+**Batch Normalization Layer**
+
+Batch normalization, despite has a bit regulatory effect, is mainly used to speed up training. It is very commonly found in deep networks. Assuming batch $B$ have $n$ elements, then:
+
+$$
+\begin{aligned}
+B &= \{x_1, x_2 \dots x_n\}\\
+\mu_B &= \frac{1}{n}\sum_{i=1}^n x_i\\
+\sigma^2_B &= \frac{1}{n} \sum_{i=1}^n (x_i - \mu_B)^2\\
+\hat{x_i} &= \frac{x_i - \mu_B}{\sqrt{\sigma^2 + \epsilon}}\\
+B_{normalized} &= \{\hat{x_1},\hat{x_2} \dots \hat{x_n}\}
+\end{aligned}
+$$
+
+It can be also very easily illustrated in plain python:
+{{<highlight py>}}
+inputs = torch.randn(5, 3)
+
+# Mean
+mu = torch.randn(3)
+# Variance
+var = torch.randn(3) ** 2
+
+# We use epsilon to prevent denominator to be zero
+epsilon = 1e-5
+
+torch.isclose(
+    F.batch_norm(inputs, mu, var, eps=epsilon),
+    (inputs - mu) / (var + epsilon).sqrt()
+)
+{{</highlight>}}
+
+There is one more thing worth to notice, as after batch normalization expectation of the input is zero, we don't have to have bias for the next adjacent layer.
+
+**Dropout Layer**
+
+Deep neural network is susceptible to over fit. It has so many parameters, which make it very vulnerable to fit into the noise in the training set. Dropout is a very computationally cheap way of regulating neural networks.
+
+Dropout only takes effect while in training. Assume input $X = \begin{bmatrix} x_1 & x_2 & \dots & x_n \end{bmatrix}$ mask array $D = \begin{bmatrix} d_1 & d_2 & \dots d_n \end{bmatrix}$ and $\forall d_i \in \{1, 0\}\; i \in \{1 \dots n\}; p = 1 - \frac{1}{n}\sum_{i=1}^n d_i$ where p is the dropout rate. Then dropout output $\hat{X} = \begin{bmatrix} x_1 d_1 & x_2 d_2 & \dots & x_n d_n\end{bmatrix}$. After training is done, we need scale down parameters with $1 - p$, as dropout makes those coefficients a bit larger.
+
+To illustrate this concept a bit intuitively, we can apply dropout on a MNIST hand writing images:
+
+![](dropout.png)
+
+We can still recognize those digits, although the last image has 40% of its feature missing. To some extent we can think dropout provides a way of breaking weak covariance between variables. Therefore, it encourages neural network to seek more reliable features, which makes our neural networks generalize better.
+
+**Max Pooling Layer**
+
+Max pooling layers have some regulatory effects by emphasising the most locally activated feature, enticing neural networks develop distinctive features.
+
+Max pooling mechanism is somewhat similar to convolution. In both mechanism, we have a moving window size defined by kernel size and dilation. In convolution, what we after is the dot product between the matrix selected by moving window and kernel matrix, but in max pooling we only after the maximum value in selected window.
+
+The following code illustrate the idea of max pooling with dilation:
+
+{{<highlight py>}}
+from torch.nn import functional as F
+
+def max_pool_channel(inputs, kernel_size=2, dilation=1, stride=None):
+    """Max pooling inputs on a single channel (matrix level max pooling)"""
+
+    # Default stride to kernel size
+    stride = stride or kernel_size
+
+    # Calculate indices for pooling
+    x_ind = (torch.arange(kernel_size) * dilation).unsqueeze(1).repeat(1, kernel_size).flatten()
+    y_ind = (torch.arange(kernel_size) * dilation).repeat(kernel_size)
+
+    # Determine result size
+    x_end = inputs.shape[0] - x_ind.max() + 1
+    y_end = inputs.shape[1] - y_ind.max() + 1
+
+    assert x_end > 0 and y_end > 0, "It does not make sense to max pooling a input smaller than kernel!"
+
+    xsteps = torch.arange(0, x_end, stride)
+    ysteps = torch.arange(0, y_end, stride)
+
+    result = torch.empty(xsteps.shape[0], ysteps.shape[0])
+
+    for i, anchor_x in enumerate(xsteps):
+        for j, anchor_y in enumerate(ysteps):
+            # perform max pooling
+            result[i, j] = inputs[anchor_x + x_ind, anchor_y + y_ind].max()
+
+    return result
+
+
+inputs = (torch.randn(1, 1, 9, 9) * 100).floor()
+
+assert torch.isclose(
+    max_pool_channel(inputs[0, 0, :, :], kernel_size=3, dilation=2),
+    F.max_pool2d(inputs, kernel_size=3, dilation=2)
+)
+
+{{</highlight>}}
+
+**To be continued ...**
