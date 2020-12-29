@@ -2,6 +2,7 @@
 title: "Beat Mazes with Reinforcement Learning"
 date: "2020-04-10"
 markup: pdc
+Tags: ["Reinforcement Learning", "Q Learning"]
 ---
 
 RL is a blooming field at the moment.

@@ -2,6 +2,7 @@
 title: "Q Learning With Linear Approximation"
 date: "2020-04-22"
 markup: pdc
+Tags: ["Reinforcement Learning", "Q Learning"]
 ---
 
 In our last post, we have used a table to track action values and built an agent that can solve randomly generated mazes. Table based $Q(s, a)$ is pretty useful. Even in some cases that states are continuous, by discretizing states into integers we can still present action-value function with a table. In this post we are going to discuss a more general way of representing action-value function with Linear methods.
@@ -10,7 +11,7 @@ In our last post, we have used a table to track action values and built an agent
 ### Linear Method
 
 We can denote action value as $Q(s, a) = W(a)^TX(s)$, where $W(a)$ is the weight vector and $X(s)$ is the feature vector.
-Table base method is actually special case of linear method. 
+Table base method is actually special case of linear method.
 For example, we have a environment that have n states, and we use the following vectors to present each state:
 
 $$
@@ -26,8 +27,8 @@ This is also call one-hot encoding. As at any time, there is only 1 entry in the
 
 ### Tile Encoding
 
-In reality the state values are often real values. 
-One way of dealing with this is discretize real numbers into integers. 
+In reality the state values are often real values.
+One way of dealing with this is discretize real numbers into integers.
 As shown in the following figure, we can draw a grid on the value plane (If the state is two dimensional), and assign a integer value to each box, then any state falls into the box can be represented with the number assigned to the box.
 
 ![](tile-encoding-1.png)
@@ -50,34 +51,34 @@ def make_activate(env, tiles, tilings):
         tiles   : an array specify how many tiles we should have at each dimension
         tilings : how many grids we should have
     """
-    
+
     obs = env.observation_space
     lb, ub = obs.low, obs.high
-    
+
     # We need a way of ravel multi-index. see aslo numpy.ravel_multi_index
     units = np.hstack([[1], np.cumprod((tilings, ) + tuple(tiles))])[:-1]
 
-    # We want our grid one tile larger than the value range, 
+    # We want our grid one tile larger than the value range,
     # therefore we don't get overflow when shifting the grid.
     scale = np.diag((np.array(tiles) - 1) / (ub - lb))
-    
+
     # grid offset
     offset = np.arange(tilings) / tilings
-    
+
     def feature(x, debug=False):
 
-        # We don't really generate grid to determine which tile we are, 
-        # but we project the state on a hyper-cube with size defined by tiling and stiles 
+        # We don't really generate grid to determine which tile we are,
+        # but we project the state on a hyper-cube with size defined by tiling and stiles
         # At last we can use np.floor to acquire the multi-index of a given state.
 
         fs = np.column_stack([
-            np.arange(tilings), 
+            np.arange(tilings),
             np.floor((scale @ (x - lb)).reshape(1, -1) + offset.reshape(-1, 1)).astype(int)
         ])
-        
+
         # We ravel the multi-index by acquire the dot product with units
         return units @ fs.T
-    
+
     return feature
 {{</highlight>}}
 
@@ -99,11 +100,11 @@ If we denote $(i_1, i_2 \dots i_n)$ the index of none zeros entries of $X(s)$, t
 {{<highlight py>}}
 n_action = env.action_space.n
 
-# How many epoch and max_steps we train 
+# How many epoch and max_steps we train
 n_epoch = 1000
 n_maxstep = 300
 
-# Feature extraction function with 20 10x10 tiles 
+# Feature extraction function with 20 10x10 tiles
 activate = make_activate(env, [10, 10], 20)
 
 # Linear weight
@@ -136,7 +137,7 @@ with tqdm(range(n_epoch)) as prog:
 
             state_next, reward, is_done, _ = env.step(action)
             sp = activate(state_next)
-                
+
             # np.sum(W[sp], axis=0) is another way to do dot product
             expected = reward + gamma * np.max(np.sum(W[sp], axis=0)) * (1 - is_done)
             W[s, action] += alpha * (expected - np.sum(W[s, action]))

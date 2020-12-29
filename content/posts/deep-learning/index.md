@@ -1,13 +1,14 @@
 ---
-title: "Deep Learning with PyTorch (In Progress)"
+title: "Deep Learning with PyTorch"
 date: "2020-12-09"
+Tags: ["Deep Learning", "Computer Vision", "PyTorch"]
 markup: pdc
 ---
 
-Neural network is one of the hottest topics today. Scientists have invented lots of specialized variations of them: Long/Short Term Memory (LSTM), Gated Recurrent Unit (GRU), Deep Convolutional Network (DCN), Auto Encoder (AE) and etc. All of those are essentially different ways of constructing parametric functional approximations. In this post, I would like to introduce some basics about neural networks.
+Neural network (NN) is one of the hottest topics today. Scientists have invented lots of specialized variations of them: Long/Short Term Memory (LSTM), Gated Recurrent Unit (GRU), Deep Convolutional Network (DCN), Auto Encoder (AE) and etc. All of those are essentially different ways of constructing parametric functional approximations. In this post, I would like to introduce some basics about networks.
 
 
-### Neural Network to the Bare-Bones
+### 1. Neural Network to the Bare-Bones
 
 The simplest neural network actually has its own name: Logistic Regression. Assuming we have an input vector $X$ and a parametric matrix $M$, then it can be expressed as $\hat{Y}=\sigma(MX)$ where $\sigma$ is the sigmoid function which is $\sigma(x) = 1/(1 + e^{-x})$. A plain fully connected deep neural network can be expressed as the following:
 
@@ -29,17 +30,15 @@ $$
 
 $X$ is the input, $Y$ is the output. $h$ here is a non-linear function which takes a vector as input and outputs another vector, theoretically it can be any function that is  differentiable. In practice, we often pick functions like ReLU, LeakyReLU or sigmoid (Ironically, ReLU and LeakyReLU is not differentiable at 0, but we still use them as they have computation advantages). $M_1, M_2 \dots,M_n$ are parametric matrices between each layer.
 
-### MNIST
+### 2. Build a Neural Network to Recognize Hand Written Digits
 
 It is possible for one to hand make a neural network. But in practice, we often choose a mature deep learning framework to start with. Strictly speaking all those deep learning frameworks are essentially auto differentiation engines. As the raise of CUDA, all the main stream deep learning framework provide GPU based calculation, which is often a few times faster than CPU based calculation.
 
 In this post, we choose PyTorch as our deep learning framework. I find PyTorch hides less than Tensorflow in API level, which make it easier when you want to use some uncanny architecture. In the rest of this post we will use PyTorch to train a neural network that can recognize MNIST hand writing digits.
 
-#### Download Training and Testing Data
+#### 2.1 Download and Prepare Data
 
 MNIST data is available almost everywhere, lots of deep learning framework ships MNIST dataset as a part of the package. In this post, we will do it in the old fashion way: download MNIST from [Yann LeCun's website](http://yann.lecun.com/exdb/mnist/). I have made a simple shell script to download the dataset which can be found [here](download.sh).
-
-#### Load and Clean Up Data
 
 The data was code in IDX file format. The first 4 bytes are the magic number of the file. Depends on the dimension of the array, the consecutive bytes (4 as a chunk) indicates the shape of the array stored. The following code shows how to convert the binary file into an numpy array.
 
@@ -65,9 +64,8 @@ def load_data(filename):
 Load data as numpy array is not the end of the story. The pixel value is ranged from 0 to 255, feed this directly to neural network will cause the parameters of the neural network flutter up and down violently, therefore we normalize it by dividing 255. Further more, as PyTorch only operates on tensors, all the data needs to convert into tensors.
 
 
-
 {{<highlight py>}}
-# If GPU is available, we will prefer GPU
+# We prefer GPU for training as it almost always means faster
 if torch.cuda.is_available():
     device = torch.device('cuda:0')
 else:
@@ -100,7 +98,7 @@ test_x, test_y = prepare(
 
 In the above code, the planed output of neural network is in one-hot format. Theoretically, $y$ here need to be in one-hot format as well. But PyTorch provides a very convenient loss functor named `CrossEntropyLoss` which has done all those for us. Therefore, we only need to pack the ground truth label in a LongTensor.
 
-#### Describe The Neural Network Architecture in PyTorch
+#### 2.2 Describe The Neural Network Architecture in PyTorch
 
 The following code shows a "deep" convolutional network, that reads an 28x28 grey scale hand writing digit and outputs the probabilities of being each digits (0 to 9):
 
@@ -163,7 +161,7 @@ class Model(nn.Module):
         return x
 {{</highlight>}}
 
-**Convolutional Layer**
+**2.2.1 Convolutional Layer**
 
 `torch.nn.Conv2d` defines a convolutional layer. Convolutional layers are very common in computer vision, as they shine in capturing local features. Assuming $X$ is a 3x3 matrix which represents a channel of a image, and K is a 2x2 matrix which is a kernel/filter matrix. Then their convolution can be express as the following:
 
@@ -237,7 +235,7 @@ assert torch.eq(
 ).all().item()
 {{</highlight>}}
 
-**Batch Normalization Layer**
+**2.2.2 Batch Normalization Layer**
 
 Batch normalization, despite has a bit regulatory effect, is mainly used to speed up training. It is very commonly found in deep networks. Assuming batch $B$ have $n$ elements, then:
 
@@ -271,7 +269,7 @@ torch.isclose(
 
 There is one more thing worth to notice, as after batch normalization expectation of the input is zero, we don't have to have bias for the next adjacent layer.
 
-**Dropout Layer**
+**2.2.3 Dropout Layer**
 
 Deep neural network is susceptible to over fit. It has so many parameters, which make it very vulnerable to fit into the noise in the training set. Dropout is a very computationally cheap way of regulating neural networks.
 
@@ -283,7 +281,7 @@ To illustrate this concept a bit intuitively, we can apply dropout on a MNIST ha
 
 We can still recognize those digits, although the last image has 40% of its feature missing. To some extent we can think dropout provides a way of breaking weak covariance between variables. Therefore, it encourages neural network to seek more reliable features, which makes our neural networks generalize better.
 
-**Max Pooling Layer**
+**2.2.4 Max Pooling Layer**
 
 Max pooling layers have some regulatory effects by emphasising the most locally activated feature, enticing neural networks develop distinctive features.
 
@@ -332,4 +330,110 @@ assert torch.isclose(
 
 {{</highlight>}}
 
-**To be continued ...**
+#### 2.3 Train the Network
+
+Now we have briefly discussed the convolutional neural network (CNN) we defined. When a neural network is initialized, all its parameters are set to random numbers. This is actually crucial for a neural network, as stochastic gradient descent (SGD) like methods are dominantly used in training neural networks. Uniformly set neural network initial weights pair with SGD like training methods will impair neural network's ability to capture different features. There are many ways of initializing the weights. Pytorch initialize weights base on the type of the layer by default, in our case it is using Xavier initialization for both convolutional layers and linear layers.
+
+As I mentioned before: after all these years development, stochastic gradient descent is still the main work horse for neural network training. But we rare use pure stochastic gradient descent anymore in practice. Variants like Adagrad, RMSProp and Adam have superseded SGD. The solo problem those variant optimizers trying to resolve is that the learning rate for different parameter in different phase of training should be different to be optimal and it is tedious and if not impossible to adjust those by hands.
+
+The following code shows how typically a neural network is trained with Pytorch:
+
+{{<highlight py>}}
+# This is a library used for tracking our training progress
+from tqdm import tqdm
+
+def evaluate_model(test_x, test_y, criterion, model, size=512):
+    "Evaluate model with randomly sampled data points"
+    try:
+        model.eval()
+
+        with torch.no_grad():
+            # test on samples from test set
+            index = torch.multinomial(torch.arange(test_x.shape[0], dtype=torch.float32), 512)
+            return criterion(model(test_x[index, :, :, :]), test_y[index]).cpu().numpy()
+
+    finally:
+        model.train()
+
+def train(train_x, train_y, test_x, test_y, model, n_epoch=100):
+    # With DataLoader provided by pytorch we can easily seperate data into batches.
+    dataset = TensorDataset(train_x, train_y)
+    loader = DataLoader(dataset, batch_size=64)
+
+    # As this is a multi-categorical problem, the most suitable loss function is cross entropy
+    criterion = nn.CrossEntropyLoss()
+
+    # For optimizer we choose Adam, which is a SGD variant
+    # that employes momentment and friendly to gradients with different magnitudes
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+
+    train_history = []
+    test_history = []
+
+    try:
+        # set model in training mode
+        model.train()
+        for epoch in tqdm(range(n_epoch)):
+            for xs, ys in loader:
+                # calculate predictions
+                yhats = model(xs)
+
+                # judge our prediction with loss function
+                loss = criterion(yhats, ys)
+
+                # clear out gradient left from last iteration
+                optimizer.zero_grad()
+
+                # generate gradient by back propagation
+                loss.backward()
+
+                # apply gradient * learning_rate to weights
+                optimizer.step()
+
+            # log training and testing accuracy
+            train_history.append(evaluate_model(train_x, train_y, model))
+            test_history.append(evaluate_model(test_x, test_y, model))
+
+        return [np.hstack(history) for history in [train_history, test_history]]
+
+    finally:
+        # set model in evaluation mode
+        model.eval()
+{{</highlight>}}
+
+Stochastic gradient descent brings down the computational cost significantly. But also it makes the training targets wandering around the lowest loss function terrain instead directly pointing to it. Therefore we are expecting the accuracy to jump up and down during the training process. The gap between training and testing, we can roughly consider those as over fit. As neural networks learned some features from training set that can not be generalized to testing sets, which means those features are actually noises. Therefore we over fit our neural network to the training set.
+
+![](loss_history.png)
+
+#### 2.4 Visualize Predictions
+
+Now we have a trained model, let us checkout its predictions on the test sets.
+
+{{<highlight py>}}
+def visualize(model, x, y):
+    # predict labels and convert result to numpy arrays
+    predicted_labels = model(x).argmax(dim=1).cpu().numpy()
+    labels = y.cpu().numpy()
+    images = x.squeeze(1).cpu().numpy()
+
+    plt.figure(figsize=(16, 8))
+
+    for i, image in enumerate(images):
+        plt.subplot(2, 5, i + 1)
+        plt.imshow(image)
+        plt.tick_params(
+            labelbottom=False)
+        plt.tick_params(
+            labelleft=False)
+        # print out predictions on the top left corner
+        plt.text(1, 3, f'{predicted_labels[i]}', fontsize=16, color='red')
+        # print out true label on top right corner
+        plt.text(25, 3, f"{labels[i]}", fontsize=16, color='white')
+
+    plt.savefig('predict.png', bbox_inches='tight')
+    plt.show()
+
+visualize(model, test_x[:10, :, :, :], test_y[:10])
+{{</highlight>}}
+
+![](predict.png)

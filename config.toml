@@ -1,0 +1,36 @@
+Theme = "anatole"
+
+baseURL = "https://yeyan.github.io/"
+languageCode = "en-us"
+title = "Ye's ML Cafe"
+
+[menu]
+  [[menu.main]]
+      name = "Home"
+      weight = 1
+      identifier = "home"
+      url = "/"
+
+  [[menu.main]]
+      name = "About"
+      weight = 2
+      identifier = "about"
+      url = "/about/"
+
+[params]
+  title = "Ye's ML Cafe"
+  author = "Ye Yan"
+  description = "ML is the next eletricity"
+  profilePicture = "/img/yeyan.jpg"
+  mainSections = ["posts", "docs"]
+  customJs = [
+    "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"
+  ]
+
+  [[params.socialIcons]]
+    url = "http://github.com/yeyan"
+    icon = "fab fa-github"
+
+  [[params.socialIcons]]
+    url = "https://www.linkedin.com/in/ye-yan-83921a154"
+    icon = "fab fa-linkedin"
